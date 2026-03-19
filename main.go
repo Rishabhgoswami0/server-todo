@@ -1,16 +1,13 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
-	"github.com/Rishabhgoswami0/shared-go/auth"
 	"github.com/Rishabhgoswami0/shared-go/database"
 	"github.com/joho/godotenv"
 )
@@ -22,9 +19,7 @@ type Todo struct {
 	Completed bool   `json:"completed"`
 }
 
-type contextKey string
-
-const userIDKey contextKey = "user_id"
+// Authentication removed, user details are hardcoded directly in handlers
 
 func main() {
 	_ = godotenv.Load() // Ignore error if .env doesn't exist
@@ -48,8 +43,8 @@ func main() {
 	mux.HandleFunc("PUT /todos/{id}", updateTodoHandler(db))
 	mux.HandleFunc("DELETE /todos/{id}", deleteTodoHandler(db))
 
-	// 3. Wrap mux with our Auth Middleware
-	handler := authMiddleware(mux)
+	// 3. Mux directly handles requests with Auth removed
+	handler := mux
 
 	port := ":3002"
 	log.Printf("server-todo running on port %s", port)
@@ -58,42 +53,12 @@ func main() {
 	}
 }
 
-// authMiddleware validates the incoming Bearer token using shared auth package
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		secret := os.Getenv("JWT_SECRET")
-		if secret == "" {
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-		secretKey := []byte(secret)
-
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "missing or malformed jwt", http.StatusUnauthorized)
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		
-		// Use shared.ValidateToken to verify and extract userID
-		_, userID, err := auth.ValidateToken(tokenString, secretKey)
-		if err != nil {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		// Pass the extracted user_id down the request context
-		ctx := context.WithValue(r.Context(), userIDKey, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
 
 // CRUD Handlers
 
 func createTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value(userIDKey).(string)
+		userID := "default-user"
 
 		var t Todo
 		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
@@ -122,7 +87,7 @@ func createTodoHandler(db *sql.DB) http.HandlerFunc {
 
 func getTodosHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value(userIDKey).(string)
+		userID := "default-user"
 
 		// Filter purely by user_id
 		rows, err := db.Query("SELECT id, user_id, title, completed FROM todos WHERE user_id = $1", userID)
@@ -148,7 +113,7 @@ func getTodosHandler(db *sql.DB) http.HandlerFunc {
 
 func updateTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value(userIDKey).(string)
+		userID := "default-user"
 		todoID := r.PathValue("id")
 		
 		var t Todo
@@ -178,7 +143,7 @@ func updateTodoHandler(db *sql.DB) http.HandlerFunc {
 
 func deleteTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value(userIDKey).(string)
+		userID := "default-user"
 		todoID := r.PathValue("id")
 
 		// Crucial: AND user_id = $2 ensures users can only delete their own
