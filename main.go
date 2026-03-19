@@ -14,7 +14,7 @@ import (
 
 type Todo struct {
 	ID        int    `json:"id"`
-	UserID    string `json:"user_id"`
+	UserID    int    `json:"user_id"`
 	Title     string `json:"title"`
 	Completed bool   `json:"completed"`
 }
@@ -53,7 +53,6 @@ func main() {
 	}
 }
 
-
 // CRUD Handlers
 
 func createTodoHandler(db *sql.DB) http.HandlerFunc {
@@ -70,7 +69,7 @@ func createTodoHandler(db *sql.DB) http.HandlerFunc {
 		// Insert into DB. The handler implicitly assigns the extracted UserID
 		err := db.QueryRow("INSERT INTO todos (user_id, title, completed) VALUES ($1, $2, $3) RETURNING id",
 			userID, t.Title, t.Completed).Scan(&id)
-		
+
 		if err != nil {
 			http.Error(w, "failed to create todo", http.StatusInternalServerError)
 			log.Printf("DB Insert Error: %v", err)
@@ -115,7 +114,7 @@ func updateTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := "default-user"
 		todoID := r.PathValue("id")
-		
+
 		var t Todo
 		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 			http.Error(w, "invalid json body", http.StatusBadRequest)
