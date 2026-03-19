@@ -57,7 +57,7 @@ func main() {
 
 func createTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := "default-user"
+		userID := 1
 
 		var t Todo
 		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
@@ -86,7 +86,7 @@ func createTodoHandler(db *sql.DB) http.HandlerFunc {
 
 func getTodosHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := "default-user"
+		userID := 1
 
 		// Filter purely by user_id
 		rows, err := db.Query("SELECT id, user_id, title, completed FROM todos WHERE user_id = $1", userID)
@@ -112,7 +112,7 @@ func getTodosHandler(db *sql.DB) http.HandlerFunc {
 
 func updateTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := "default-user"
+		userID := 1
 		todoID := r.PathValue("id")
 
 		var t Todo
@@ -142,7 +142,7 @@ func updateTodoHandler(db *sql.DB) http.HandlerFunc {
 
 func deleteTodoHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := "default-user"
+		userID := 1
 		todoID := r.PathValue("id")
 
 		// Crucial: AND user_id = $2 ensures users can only delete their own
